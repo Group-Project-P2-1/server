@@ -23,9 +23,9 @@ io.on("connection", (socket) => {
         timeout: null,
       };
     }
+
     console.log(`User ${username} is attempting to join room ${roomId}`);
-    console.log(rooms[roomId].players);
-    
+
     if (rooms[roomId].players.length < 2) {
       rooms[roomId].players.push({ id: socket.id, username, move: null });
       socket.join(roomId);
@@ -35,20 +35,22 @@ io.on("connection", (socket) => {
         console.log(`Room ${roomId} is full, starting game`);
         clearTimeout(rooms[roomId].timeout);
         io.to(roomId).emit("start-game");
-
       } else {
         console.log(`Waiting for opponent in room ${roomId}`);
         socket.emit("waiting-opponent");
-        rooms[roomId].timeout = setTimeout(() => {
-            if (rooms[roomId] && rooms[roomId].players.length < 2) {
-                console.log(`Room ${roomId} timeout, no opponent joined`);
-                io.to(roomId).emit("opponent-timeout");
-                rooms[roomId].players.forEach((player) => {
-                  io.to(player.id).emit("timeout");
-                });
-                rooms[roomId] = {};
-              }
-        }, 5000);
+
+        if (!rooms[roomId].timeout) {
+          rooms[roomId].timeout = setTimeout(() => {
+            if (rooms[roomId]?.players.length < 2) {
+              console.log(`Opponent timeout in room ${roomId}`);
+              io.to(roomId).emit("opponent-timeout");
+              rooms[roomId].players.forEach((player) => {
+                io.to(player.id).emit("timeout");
+              });
+              delete rooms[roomId];
+            }
+          }, 30000);
+        }
       }
     } else {
       console.log(`Room ${roomId} is full`);
@@ -57,15 +59,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("make-move", ({ roomId, move }) => {
-    const player = rooms[roomId]?.players.find((p) => p.id === socket.id);
+    const room = rooms[roomId];
+    if (!room) return;
+
+    const player = room.players.find((p) => p.id === socket.id);
     if (player) player.move = move;
 
-    if (
-      rooms[roomId] &&
-      rooms[roomId].players[0].move &&
-      rooms[roomId].players[1].move
-    ) {
-      const [player1, player2] = rooms[roomId].players;
+    const [player1, player2] = room.players;
+
+    if (player1.move && player2.move) {
       const result = determineWinner(player1.move, player2.move);
       io.to(roomId).emit("round-result", {
         result,
@@ -80,10 +82,14 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     for (const roomId in rooms) {
-      rooms[roomId].players = rooms[roomId].players.filter(
-        (p) => p.id !== socket.id
-      );
-      if (rooms[roomId].players.length === 0) delete rooms[roomId];
+      const room = rooms[roomId];
+      if (room?.players) {
+        room.players = room.players.filter((p) => p.id !== socket.id);
+        if (room.players.length === 0) {
+          clearTimeout(room.timeout);
+          delete rooms[roomId];
+        }
+      }
     }
     console.log("User disconnected:", socket.id);
   });
@@ -102,5 +108,5 @@ function determineWinner(move1, move2) {
 }
 
 server.listen(port, () => {
-  console.log(`Server is running on http://localhost: ${port}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });
