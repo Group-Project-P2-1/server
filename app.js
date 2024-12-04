@@ -81,11 +81,12 @@ io.on("connection", (socket) => {
     const [player1, player2] = room.players;
 
     if (player1.move && player2.move) {
-      const result = determineWinner(player1, player2);
+      const { result, message } = determineWinner(player1, player2);
       io.to(roomId).emit("round-result", {
         result,
         move1: player1.move,
         move2: player2.move,
+        message,
       });
 
       player1.move = null;
@@ -118,9 +119,21 @@ function determineWinner(player1, player2) {
     (move1 === "scissors" && move2 === "paper") ||
     (move1 === "paper" && move2 === "rock")
   ) {
-    return `${username1} wins`;
+    return {
+      result: `${username1} wins`,
+      message: {
+        [username1]: "You win!",
+        [username2]: "You lose!",
+      },
+    };
   }
-  return `${username2} wins`;
+  return {
+    result: `${username2} wins`,
+    message: {
+      [username1]: "You lose!",
+      [username2]: "You win!",
+    },
+  };
 }
 
 server.listen(port, () => {
