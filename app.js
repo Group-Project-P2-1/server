@@ -5,10 +5,14 @@ const port = process.env.PORT || 3000;
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 
+app.get("/", (req, res) => {
+  res.send("App Runing");
+});
+
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "https://rpsbattle-2edaa.web.app",
   },
 });
 
@@ -89,7 +93,7 @@ io.on("connection", (socket) => {
         message,
       });
       console.log(result);
-      
+
       player1.move = null;
       player2.move = null;
     }
@@ -123,7 +127,7 @@ function determineWinner(player1, player2) {
       },
     };
   }
-  
+
   if (
     (move1 === "rock" && move2 === "scissors") ||
     (move1 === "scissors" && move2 === "paper") ||
