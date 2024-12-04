@@ -88,7 +88,8 @@ io.on("connection", (socket) => {
         move2: player2.move,
         message,
       });
-
+      console.log(result);
+      
       player1.move = null;
       player2.move = null;
     }
@@ -113,7 +114,16 @@ function determineWinner(player1, player2) {
   const { move: move1, username: username1 } = player1;
   const { move: move2, username: username2 } = player2;
 
-  if (move1 === move2) return "Draw";
+  if (move1 === move2) {
+    return {
+      result: "Draw",
+      message: {
+        [username1]: "It's a draw!",
+        [username2]: "It's a draw!",
+      },
+    };
+  }
+  
   if (
     (move1 === "rock" && move2 === "scissors") ||
     (move1 === "scissors" && move2 === "paper") ||
