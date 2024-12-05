@@ -119,6 +119,7 @@ io.on("connection", (socket) => {
     if (player) player.move = move;
 
     const [player1, player2] = room.players;
+    console.log(player1, "<<<<<");
 
     if (player1.move && player2.move) {
       const { result, message } = determineWinner(player1, player2);
@@ -126,6 +127,8 @@ io.on("connection", (socket) => {
         result,
         move1: player1.move,
         move2: player2.move,
+        username1: player1.username,
+        username2: player2.username,
         message,
       });
       console.log(result);
