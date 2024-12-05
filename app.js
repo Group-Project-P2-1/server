@@ -22,7 +22,6 @@ io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
   socket.on("join-room", ({ roomId, username }) => {
-    // Check if the user is already in a room
     const existingRoom = Object.values(rooms).find((room) =>
       room.players.some((player) => player.id === socket.id)
     );
@@ -71,6 +70,43 @@ io.on("connection", (socket) => {
             delete rooms[roomId];
           }
         }, 30000);
+      }
+    }
+  });
+
+  socket.on("disconnect", () => {
+    const existingRoom = Object.values(rooms).find((room) =>
+      room.players.some((player) => player.id === socket.id)
+    );
+
+    if (existingRoom) {
+      const playerIndex = existingRoom.players.findIndex(
+        (player) => player.id === socket.id
+      );
+      const username = existingRoom.players[playerIndex].username;
+
+      console.log(
+        `User  ${username} has disconnected from room ${existingRoom.id}`
+      );
+
+      existingRoom.players.splice(playerIndex, 1);
+
+      if (existingRoom.players.length > 0) {
+        const remainingPlayer = existingRoom.players[0];
+        io.to(remainingPlayer.id).emit("opponent-disconnected", {
+          roomId: existingRoom.id,
+        });
+        console.log(
+          `Notified ${remainingPlayer.username} that their opponent has disconnected`
+        );
+      }
+
+      if (existingRoom.players.length === 0) {
+        clearTimeout(existingRoom.timeout);
+        delete rooms[existingRoom.id];
+        console.log(
+          `Room ${existingRoom.id} has been deleted due to no players`
+        );
       }
     }
   });
